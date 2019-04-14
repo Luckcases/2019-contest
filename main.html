@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+    }
+
+    #myCanvas {
+      /*position: absolute;*/
+      /*top:50%;*/
+      /*left: 50%;*/
+      /*transform: translate(-50%,-50%);*/
+      /*border: 1px solid #d3d3d3;*/
+      width: 1536px;
+      height: 733px;
+      z-index: 10;
+    }
+
+  </style>
+</head>
+<body>
+<canvas id='myCanvas'></canvas>
+</body>
+</html>
+<script>
+  let targetArr = [];
+  let boxes = [];
+  let Level = 0;
+  let arr1 = [
+    ['wall','wall','wall','wall','wall','wall','wall','wall'],
+    ['wall','wall','brick','person','wall','wall','wall','wall'],
+    ['wall','wall','brick','box','brick','brick','wall','wall'],
+    ['wall','wall','wall','brick','wall','brick','wall','wall'],
+    ['wall','target','wall','brick','wall','brick','brick','wall'],
+    ['wall','target','box','brick','brick','wall','brick','wall'],
+    ['wall','target','brick','brick','brick','box','brick','wall'],
+    ['wall','wall','wall','wall','wall','wall','wall','wall']
+    ];
+  window.onload = function(){
+    run();
+  };
+  
+  function run(){
+    let oCan = document.getElementById('myCanvas');
+    let ctx = oCan.getContext('2d');
+    changeLevel(Level,0);
+    findTarget();
+    boxes = findBox();
+    printMap(ctx);
+  }
+
+  //清屏
+  function clearScreen(ctx){
+    ctx.clearRect(0,0,1536,750);
+  }
+
+  function printMap(ctx) {
+    console.log("mappppp");
+    clearScreen(ctx);
+
+    for (let i = 0; i < arr1.length; i++) {
+      for (let j = 0; j < arr1[0].length; j++) {
+        //画初始图
+        if (arr1[i][j] === 'wall') {
+          console.log('wall');
+          paintWall(ctx, j, i, 40);
+        } else if (arr1[i][j] === 'brick') {
+          console.log('brick');
+          paintBrick(ctx, j, i, 40);
+        } else if (arr1[i][j] === 'target') {
+          console.log('target');
+          paintBrick(ctx, j, i, 40);
+          paintTarget(ctx, j, i, 10, 'lime');
+        } else if (arr1[i][j] === 'box') {
+          console.log('box');
+          paintBrick(ctx, j, i, 40);
+          let index = getBoxIndex(boxes, i, j);
+          if (boxes[index].isOnTarget) {
+            paintBox(ctx, j, i, 40, 'red');
+          } else {
+            paintBox(ctx, j, i, 40, 'yellow');
+          }
+        } else if (arr1[i][j] === 'person') {
+          console.log('person');
+          paintBrick(ctx, j, i, 40);
+          paintPerson(ctx, j, i, 20, 'pink');
+        }
+
+      }
+    }
+  }
+
+  //画人
+  function paintPerson(ctx, x, y, size,color){
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    //我们在内部就写好该往哪里画，传过来的x，y坐标值就可以直接在里面计算了
+    ctx.arc(530+x*size*2+20, 180+y*size*2+20, size, 0, 2*Math.PI);
+    ctx.fill();
+  }
+
+  //画箱子
+  function paintBox(ctx, x, y, size,color){
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.fillRect(530+x*size, 180+y*size, size, size);
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.moveTo(530+x*size, 180+y*size);
+    ctx.lineTo(530+x*size+size, 180+y*size+size);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(530+x*size+size, 180+y*size);
+    ctx.lineTo(530+x*size, 180+y*size+size);
+    ctx.stroke();
+    ctx.strokeRect(530+x*size, 180+y*size, size, size);
+  }
+
+  //画目标点
+  function paintTarget(ctx, x, y, size,color){
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.arc(530+x*size*4+20, 180+y*size*4+20, size, 0, 2*Math.PI);
+    ctx.fill();
+  }
+
+  //画地砖
+  function paintBrick(ctx, x, y, size){
+    ctx.beginPath();
+    ctx.fillStyle = 'blue';
+    ctx.fillRect(530+x*size, 180+y*size, size, size);
+    ctx.strokeStyle = 'lightblue';
+    for(let i = 0; i <= 3; i++){
+      ctx.beginPath();
+      ctx.moveTo(530+x*size, 180+y*size+0.25*(i+1)*size);
+      ctx.lineTo(530+x*size+size, 180+y*size+0.25*(i+1)*size);
+      ctx.stroke();
+    }
+    for(let i = 0; i < 4; i++){
+      ctx.beginPath();
+      if(i%2 === 0){
+        ctx.moveTo(530+x*size+0.5*size, 180+y*size+0.25*i*size);
+        ctx.lineTo(530+x*size+0.5*size, 180+y*size+0.25*(i+1)*size);
+        ctx.stroke();
+      }else{
+        ctx.moveTo(530+x*size+0.25*size, 180+y*size+0.25*i*size);
+        ctx.lineTo(530+x*size+0.25*size, 180+y*size+0.25*(i+1)*size);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(530+x*size+0.75*size, 180+y*size+0.25*i*size);
+        ctx.lineTo(530+x*size+0.75*size, 180+y*size+0.25*(i+1)*size);
+        ctx.stroke();
+      }
+    }
+  }
+
+  //画围墙
+  function paintWall(ctx, x, y, size) {
+    console.log('printWall');
+    ctx.beginPath();
+    ctx.fillStyle = 'gray';
+    ctx.fillRect(530 + x * size, 180 + y * size, size, size);
+    ctx.strokeStyle = 'white';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(530 + x * size + 0.5 * size, 180 + y * size);
+    ctx.lineTo(530 + x * size + 0.5 * size, 180 + y * size + size);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(530 + x * size, 180 + y * size + 0.5 * size);
+    ctx.lineTo(530 + x * size + size, 180 + y * size + 0.5 * size);
+    ctx.stroke();
+  }
+
+  //找到人的坐标
+  function findPerson(){
+    for (let i = 0; i < arr1.length; i++) {
+      let tmp = arr1[i];
+      for (let j = 0; j < tmp.length; j++) {
+        if (arr1[i][j] === 'person') {
+          return {personX:i,personY:j,isOnTarget:false};
+        }
+      }
+    }
+  }
+
+  //找箱子的坐标，并把他们放到数组里
+  function findBox() {
+    let boxes = [];
+    for (let i = 0; i < arr1.length; i++) {
+      let tmp = arr1[i];
+      for (let j = 0; j < tmp.length; j++) {
+        if (arr1[i][j] === 'box') {
+          boxes.push({'x':i,'y':j,isOnTarget:false});
+        }
+      }
+    }
+    return boxes;
+  }
+
+  //找到目标点
+  function findTarget() {
+    targetArr = [];
+    for (let i = 0; i < arr1.length; i++) {
+      let tmp = arr1[i];
+      for (let j = 0; j < tmp.length; j++) {
+        if (arr1[i][j] === 'target') {
+          targetArr.push({x:i,y:j});
+        }
+      }
+    }
+  }
+
+  function getBoxIndex(boxes, i,j){
+    let index = 0;
+    for(let k = 0;k<boxes.length;k++){
+      if(boxes[k].x === i && boxes[k].y === j){
+        //找到了这个箱子的下标
+        index = k;
+      }
+    }
+    return index;
+  }
+
+  document.onkeydown = function(ev) {
+    let oCan = document.getElementById('myCanvas');
+    let ctx = oCan.getContext('2d');
+    let oEvent = ev || event;
+
+    let person = findPerson();
+    let i = person.personX;
+    let j = person.personY;
+    let moveTo = (person.isOnTarget? 'target' : 'brick');
+
+
+    if (oEvent.keyCode === 37 || oEvent.keyCode === 39) {
+      let nextY = (oEvent.keyCode === 37? j-1 : j+1);
+      let nextY2 = (oEvent.keyCode === 37? j-2 : j+2);
+        if (arr1[i][nextY] === 'brick') { //旁边是砖块直接移动
+          arr1[i][nextY] = 'person';
+          arr1[i][j] = moveTo;
+          person.isOnTarget = false;
+        } else if (arr1[i][nextY] === 'box' && arr1[i][nextY2] !== 'wall' && arr1[i][nextY2] !== 'box') { //旁边只有一个箱子，可以移动
+          let index = getBoxIndex(boxes, i, nextY);
+          if(!boxes[index].isOnTarget){
+            if(arr1[i][nextY2] === 'brick'){ //移动到目标上面
+              arr1[i][nextY2] = 'box';
+              arr1[i][nextY] = 'person';
+              arr1[i][j] = moveTo;
+              person.isOnTarget = false;
+            }else if(arr1[i][nextY2] === 'target'){ //移动到砖块上
+              arr1[i][nextY2] = 'box';
+              arr1[i][nextY] = 'person';
+              arr1[i][j] = moveTo;
+              person.isOnTarget = false;
+              boxes[index].isOnTarget = true;
+            }
+          }else if(boxes[index].isOnTarget){ //本来箱子在目标上
+            if(arr1[i][nextY2] === 'brick'){
+              arr1[i][nextY2] = 'box';
+              arr1[i][nextY] = 'person';
+              arr1[i][j] = moveTo;
+              boxes[index].isOnTarget = false;
+              person.isOnTarget = true;
+            }else if(arr1[i][j-2] === 'target'){
+              arr1[i][nextY2] = 'box';
+              arr1[i][nextY] = 'person';
+              arr1[i][j] = moveTo;
+            }
+          }
+          boxes[index].y--;
+        } else if (arr1[i][nextY] === 'target') {
+          arr1[i][nextY] = 'person';
+          arr1[i][j] = moveTo;
+        }
+    }else if (oEvent.keyCode === 38 || oEvent.keyCode === 40) {
+      let nextX = (oEvent.keyCode === 40? j-1 : j+1);
+      let nextX2 = (oEvent.keyCode === 40? j-2 : j+2);
+        if (arr1[i][nextX] === 'brick') { //旁边是砖块直接移动
+          arr1[i][nextX] = 'person';
+          arr1[i][j] = moveTo;
+          person.isOnTarget = false;
+        } else if (arr1[i][nextX] === 'box' && arr1[i][nextX2] !== 'wall' && arr1[i][nextX2] !== 'box') { //旁边只有一个箱子，可以移动
+          let index = getBoxIndex(boxes, i, nextX);
+          if(!boxes[index].isOnTarget){
+            if(arr1[i][nextX2] === 'brick'){
+              arr1[i][nextX2] = 'box';
+              arr1[i][nextX] = 'person';
+              arr1[i][j] = moveTo;
+              person.isOnTarget = false;
+            }else if(arr1[i][nextX2] === 'target'){
+              arr1[i][nextX2] = 'box';
+              arr1[i][nextX] = 'person';
+              arr1[i][j] = 'target';
+              person.isOnTarget = false;
+              boxes[index].isOnTarget = true;
+            }
+          }else if(boxes[index].isOnTarget){
+            if(arr1[i][nextX2] === 'brick'){
+              arr1[i][nextX2] = 'box';
+              arr1[i][nextX] = 'person';
+              arr1[i][j] = moveTo;
+              person.isOnTarget = true;
+              boxes[index].isOnTarget = false;
+            }else if(arr1[i][j-2] === 'target'){
+              arr1[i][nextX2] = 'box';
+              arr1[i][nextX] = 'person';
+              arr1[i][j] = moveTo;
+            }
+          }
+          boxes[index].y--;
+        } else if (arr1[i][nextX] === 'target') {
+          arr1[i][nextX] = 'person';
+          arr1[i][j] = moveTo;
+        }
+    }
+    printMap(ctx);
+    judgeWin();
+  };
+
+  function judgeWin() {
+    let count = 0;
+    for (let p = 0; p < boxes.length; p++) {
+      if(boxes[p].isOnTarget)
+        count++;
+    }
+    if (count === boxes.length) {
+      alert('You Win! 一共走了' + countStep + '步');
+    }
+  }
+
+  //改变关卡和难度
+  function changeLevel(Level,Task) {
+     let mapBase = [];
+     for (let i = 0;i<3;i++){
+       mapBase[i] = [];
+       for(let j = 0;j<3;j++){
+         mapBase[i].push(arr1);
+       }
+     }
+     arr1 = mapBase[Level][Task];
+  }
+</script>
